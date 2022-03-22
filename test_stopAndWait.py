@@ -26,7 +26,12 @@ def run_sim(test_results_file_name):
     time.sleep(1)
 
 
+# if __name__ == '__main__':
+#   test_results_file_name = '_results_test_stopAndWait.txt'
+#   run_sim(test_results_file_name)
+
+
 def test_no_diff():
-    test_results_file_name = 'test_results_stopAndWait.txt'
+    test_results_file_name = '_results_test_stopAndWait.txt'
     run_sim(test_results_file_name)
     assert os.stat(test_results_file_name).st_size == 0

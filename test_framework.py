@@ -27,7 +27,6 @@ def run_sim(test_results_file_name):
 
 
 def test_no_diff():
-    test_results_file_name = 'test_results_framework.txt'
+    test_results_file_name = '_results_test_framework.txt'
     run_sim(test_results_file_name)
-    result_file_no_complaints = os.stat(test_results_file_name).st_size == 0
-    assert result_file_no_complaints
+    assert os.stat(test_results_file_name).st_size == 0
