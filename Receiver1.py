@@ -40,7 +40,6 @@ class Receiver:
             for m in received_messages:
                 packet = m[HEADER_SIZE:]
                 transferred_file.write(packet)
-                time.sleep(0.1)
 
 
 if __name__ == '__main__':

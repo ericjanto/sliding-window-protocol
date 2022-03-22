@@ -4,8 +4,8 @@ from socket import *
 import sys
 from time import sleep
 
-from constants import PAYLOAD_SIZE, SEQ_SIZE, HEADER_SIZE
-from conversions import seq_int_to_byte, seq_byte_to_int, eof_int_to_byte
+from constants import PAYLOAD_SIZE, HEADER_SIZE
+from conversions import seq_int_to_byte, eof_int_to_byte
 # from utils import set_up_logging
 
 
@@ -48,6 +48,37 @@ class Sender:
         return payloads
 
     @staticmethod
+    def int_to_bytearray(x, store_in_n_bytes):
+        return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
+
+    @staticmethod
+    def assemble_packets(payloads_l):
+        packets_l = {}
+
+        for s in payloads_l:
+            packet = bytearray(HEADER_SIZE + PAYLOAD_SIZE)
+            header = bytearray(HEADER_SIZE)
+
+            seq_in_byte = Sender.int_to_bytearray(s, 2)
+
+            eof = 1 if s == len(payloads_l) - 1 else 0
+            eof_in_byte = bytearray(eof.to_bytes(1, byteorder='big'))
+
+            header[0] = seq_in_byte[0]
+            header[1] = seq_in_byte[1]
+            header[2] = eof_in_byte[0]
+
+            packet[0] = header[0]
+            packet[1] = header[1]
+            packet[2] = header[2]
+            packet[3:] = payloads_l[s]
+            packets_l[s] = packet
+
+        return packets_l
+
+    # For some reason, the below refactored version of assemble_packets
+    # leads to less passed test iterations.
+    @staticmethod
     def add_headers(payloads):
         packets = {}
         for s in payloads:
@@ -69,7 +100,8 @@ class Sender:
     def send_file_content(self):
         file_content = Sender.read_file(self.file_name)
         payloads = Sender.get_payloads(file_content)
-        packets = Sender.add_headers(payloads)
+        # packets = Sender.add_headers(payloads)
+        packets = Sender.assemble_packets(payloads)
 
         for s in packets:
             self.send_packet(self.server_ip, self.server_port, packets[s])
