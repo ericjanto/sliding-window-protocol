@@ -1,0 +1,14 @@
+# Size of seq number, in bytes.
+SEQ_SIZE = 2
+
+# Size of eof flag, in bytes.
+EOF_SIZE = 1
+
+# Size of packet header, in bytes.
+HEADER_SIZE = SEQ_SIZE + EOF_SIZE
+
+# Size of packet payload, in bytes.
+PAYLOAD_SIZE = 1024
+
+# Buffer size for received messages, in bytes.
+BUFFER_SIZE = HEADER_SIZE + PAYLOAD_SIZE
