@@ -52,16 +52,16 @@ class Sender:
         return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
 
     @staticmethod
-    def assemble_packets(payloads_l):
-        packets_l = {}
+    def add_headers(payloads):
+        packets = {}
 
-        for s in payloads_l:
+        for s in payloads:
             packet = bytearray(HEADER_SIZE + PAYLOAD_SIZE)
             header = bytearray(HEADER_SIZE)
 
             seq_in_byte = Sender.int_to_bytearray(s, 2)
 
-            eof = 1 if s == len(payloads_l) - 1 else 0
+            eof = 1 if s == len(payloads) - 1 else 0
             eof_in_byte = bytearray(eof.to_bytes(1, byteorder='big'))
 
             header[0] = seq_in_byte[0]
@@ -71,15 +71,15 @@ class Sender:
             packet[0] = header[0]
             packet[1] = header[1]
             packet[2] = header[2]
-            packet[3:] = payloads_l[s]
-            packets_l[s] = packet
+            packet[3:] = payloads[s]
+            packets[s] = packet
 
-        return packets_l
+        return packets
 
     # For some reason, the below refactored version of assemble_packets
     # leads to less passed test iterations.
     @staticmethod
-    def add_headers(payloads):
+    def add_headers_refactored(payloads):
         packets = {}
         for s in payloads:
             seq_byte = seq_int_to_byte(s)
@@ -101,7 +101,7 @@ class Sender:
         file_content = Sender.read_file(self.file_name)
         payloads = Sender.get_payloads(file_content)
         # packets = Sender.add_headers(payloads)
-        packets = Sender.assemble_packets(payloads)
+        packets = Sender.add_headers(payloads)
 
         for s in packets:
             self.send_packet(self.server_ip, self.server_port, packets[s])

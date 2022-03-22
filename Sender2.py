@@ -2,131 +2,82 @@
 from socket import *
 import sys
 
+from Sender1 import Sender
 from CustomTimer import *
-
-# server_ip is either host name (resolved by OS DNS) or IP address
-server_ip = sys.argv[1]
-server_port = int(sys.argv[2])
-file_name = sys.argv[3]
-# Positive integer in ms
-retry_timeout = int(sys.argv[4])
-
-# Set up client socket
-client_socket = socket(AF_INET, SOCK_DGRAM)
-client_socket.settimeout(retry_timeout / 1000)
-
-HEADER_SIZE = 3
-PAYLOAD_SIZE = 1024
-
-global_timer = CustomTimer()
+from constants import BUFFER_SIZE
 
 
-def extract_payloads(content):
-    payloads_l = {}
-    seq = 0
+class Sender2(Sender):
+    # An additional constructor since the timeout class field is new
+    def __init__(self, server_ip, server_port, file_name, timeout_ms):
+        super(Sender2, self).__init__(server_ip, server_port, file_name)
+        self.timeout = timeout_ms / 1000
+        self.client_socket.settimeout(self.timeout)
+        self.timer = CustomTimer()
 
-    # I'm sure there is a more elegant way to do this
-    start = 0
-    stop = PAYLOAD_SIZE
-    while start <= len(content):
-        # For last package: only send file content leftovers
-        if stop > len(content):
-            stop = len(content)
+    @staticmethod
+    def int_to_bytearray(x, store_in_n_bytes):
+        return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
 
-        payload = content[start:stop]
-        payloads_l[seq] = payload
+    @staticmethod
+    def bytearray_to_int(ba, number_of_fields):
+        return int.from_bytes(ba[0:number_of_fields], 'big')
 
-        if stop == len(content):
-            # Terminate while loop
-            start = len(content) + 1
-        else:
-            start = stop
+    # Checks whether a package transfer is ACKnowledged
+    @staticmethod
+    def is_ACK(current_seq, received_ack_packet):
+        rap_int = Sender2.bytearray_to_int(received_ack_packet, 2)
+        return current_seq == rap_int
 
-        stop += PAYLOAD_SIZE
-        seq += 1
+    @staticmethod
+    def calculate_throughput(total_time_in_s, datasize_in_bytes):
+        # Factor of (1000) since we want to output in kilobytes/s
+        return (datasize_in_bytes / 1000) / total_time_in_s
 
-    return payloads_l
+    def get_file_size(self):
+        return len(Sender.read_file(self.file_name))
 
+    def send_file_content(self):
+        file_content = Sender.read_file(self.file_name)
+        packets = Sender.add_headers(Sender.get_payloads(file_content))
 
-# I could definitely do the below in extract_payloads
-def assemble_packets(payloads_l):
-    packets_l = {}
+        retransmissions = 0
+        transmission_time = 0
 
-    for s in payloads_l:
-        packet = bytearray(HEADER_SIZE + PAYLOAD_SIZE)
-        header = bytearray(HEADER_SIZE)
+        self.timer.start_timer()
+        for s in packets:
+            success = False
+            resent = 0
+            while not success:
+                # logging.debug(f'Sending packet {s}. Attempt: {resent}.')
+                self.client_socket.sendto(packets[s], (self.server_ip, self.server_port))
 
-        seq_in_byte = int_to_bytearray(s, 2)
+                try:
+                    message, _ = self.client_socket.recvfrom(BUFFER_SIZE)
+                    if Sender2.is_ACK(s, message):
+                        success = True
+                        # If last ACK:
+                        if s == len(packets) - 1:
+                            transmission_time = self.timer.get_current_timer_value()
+                except error:
+                    # logging.debug(f'Resending packet {s} because ACK not received within time window.')
+                    resent += 1
 
-        eof = 1 if s == len(payloads_l) - 1 else 0
-        eof_in_byte = bytearray(eof.to_bytes(1, byteorder='big'))
+            retransmissions += resent
+        self.print_results(retransmissions, transmission_time)
 
-        header[0] = seq_in_byte[0]
-        header[1] = seq_in_byte[1]
-        header[2] = eof_in_byte[0]
-
-        packet[0] = header[0]
-        packet[1] = header[1]
-        packet[2] = header[2]
-        packet[3:] = payloads_l[s]
-        packets_l[s] = packet
-
-    return packets_l
-
-
-def int_to_bytearray(x, store_in_n_bytes):
-    return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
-
-
-def send_packets(packets_l):
-    number_retransmissions = 0
-    transmission_time = 0
-    global_timer.start_timer()
-    for s in packets_l:
-        success = False
-        resent = 0
-        while not success:
-            # TODO: remove print statement
-            # print(f'Sending packet {s}. Attempt: {resent}.')
-            client_socket.sendto(packets_l[s], (server_ip, server_port))
-
-            try:
-                message, _ = client_socket.recvfrom(2048)
-                if is_ACK(s, message):
-                    success = True
-                    # If last ACK:
-                    if s == len(packets_l) - 1:
-                        transmission_time = global_timer.get_current_timer_value()
-            except error:
-                # print('Resending file because ACK not received within time window.')
-                resent += 1
-
-        number_retransmissions += resent
-    return number_retransmissions, transmission_time
+    def print_results(self, retransmissions, transmission_time):
+        throughput = round(Sender2.calculate_throughput(transmission_time, self.get_file_size()), 2)
+        print(f'{retransmissions} {throughput}')
 
 
-def bytearray_to_int(ba, number_of_fields):
-    return int.from_bytes(ba[0:number_of_fields], 'big')
+if __name__ == '__main__':
+    # server_ip is either host name (resolved by OS DNS) or IP address
+    SERVER_IP = sys.argv[1]
+    SERVER_PORT = int(sys.argv[2])
+    FILE_NAME = sys.argv[3]
+    # Positive integer in ms
+    TIMEOUT_MS = int(sys.argv[4])
 
-
-# Checks whether a package transfer is ACKnowledged
-def is_ACK(current_seq, received_ack_packet):
-    rap_int = bytearray_to_int(received_ack_packet, 2)
-    return current_seq == rap_int
-
-
-def calculate_throughput(total_time_in_s, datasize_in_bytes):
-    # Factor of (1000) since we want to output in kilobytes/s
-    return (datasize_in_bytes / 1000) / total_time_in_s
-
-
-# Read into packets
-with open(file_name, 'rb') as f:
-    file_content = bytearray(f.read())
-
-payloads = extract_payloads(file_content)
-packets = assemble_packets(payloads)
-retransmissions, time_to_send = send_packets(packets)
-throughput = round(calculate_throughput(time_to_send, len(file_content)), 2)
-
-print(f'{retransmissions} {throughput}')
+    sender = Sender2(SERVER_IP, SERVER_PORT, FILE_NAME, TIMEOUT_MS)
+    sender.send_file_content()
