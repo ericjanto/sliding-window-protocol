@@ -4,8 +4,10 @@ from socket import *
 import sys
 from time import sleep
 
-from constants import PAYLOAD_SIZE, HEADER_SIZE
+from constants import PAYLOAD_SIZE, HEADER_SIZE, SEQ_SIZE, EOF_SIZE
 from conversions import seq_int_to_byte, eof_int_to_byte
+
+
 # from utils import set_up_logging
 
 
@@ -50,6 +52,14 @@ class Sender:
     @staticmethod
     def int_to_bytearray(x, store_in_n_bytes):
         return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
+
+    @staticmethod
+    def seq_int_to_byte(seq_int):
+        return Sender.int_to_bytearray(seq_int, SEQ_SIZE)
+
+    @staticmethod
+    def eof_int_to_byte(eof_int):
+        return Sender.int_to_bytearray(eof_int, EOF_SIZE)
 
     @staticmethod
     def add_headers(payloads):

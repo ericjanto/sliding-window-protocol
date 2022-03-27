@@ -2,15 +2,14 @@
 import sys
 
 from Receiver1 import Receiver
-from constants import BUFFER_SIZE, HEADER_SIZE
+from constants import BUFFER_SIZE, HEADER_SIZE, ACK_SIZE
 
 
 class Receiver2(Receiver):
     # Checks whether a received packet is a retransmission
     # Do this by checking whether its SEQ is different to the
     # most recently received packet SEQ, or the same
-    @staticmethod
-    def is_duplicate(received_packet):
+    def is_duplicate(self, received_packet):
         # Maybe need to handle duplicate packets at some point,
         # but atm duplicates just replace packets in the dictionary
         # so duplicates are never written to a file multiple times
@@ -20,15 +19,10 @@ class Receiver2(Receiver):
     def int_to_bytearray(x, store_in_n_bytes):
         return bytearray(x.to_bytes(store_in_n_bytes, byteorder='big'))
 
-    @staticmethod
-    def bytearray_to_int(ba, number_of_fields):
-        # number_of_fields specified index - 1 until which we add
-        return int.from_bytes(ba[0:number_of_fields], 'big')
-
     def send_ACK(self, seq, client_address):
         # Create ACK (2 bytes = 16-bit seq number)
         # This can just be the seq of the received packet
-        ack = Receiver2.int_to_bytearray(seq, 2)
+        ack = Receiver2.int_to_bytearray(seq, ACK_SIZE)
         self.server_socket.sendto(ack, client_address)
 
     def write_packets_to_file(self, packets):
@@ -41,12 +35,12 @@ class Receiver2(Receiver):
         packets = {}
         while True:
             # client_address is client IP and port
-            message, client_address = self.server_socket.recvfrom(BUFFER_SIZE)
-            header = message[0:HEADER_SIZE]
-            seq = self.bytearray_to_int(header, 2)
-            eof = header[HEADER_SIZE - 1]
+            message, client_address = self.receive_message()
 
-            packet = message[HEADER_SIZE:]
+            seq = Receiver2.get_seq(message)
+            eof = Receiver2.get_eof(message)
+
+            packet = Receiver2.remove_header(message)
             packets[seq] = packet
             self.send_ACK(seq, client_address)
 

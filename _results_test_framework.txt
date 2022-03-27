@@ -1,0 +1,1 @@
+rfile1.jpg sfile.jpg differ: byte 1, line 1

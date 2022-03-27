@@ -19,8 +19,9 @@ def run_sim(test_results_file_name):
     receiver_no = 2
     receive_file_name = 'rfile2.jpg'
     retry_timout = 10
+    window_size = ''
     test = threading.Thread(target=FrameworkTest.run_n_times,
-                            args=(n, sender_no, receiver_no, receive_file_name, retry_timout, test_results_file_name,))
+                            args=(n, sender_no, receiver_no, receive_file_name, retry_timout, window_size, test_results_file_name,))
     test.start()
     test.join()
     time.sleep(1)

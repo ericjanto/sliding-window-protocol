@@ -18,6 +18,29 @@ class Receiver:
         self.server_socket = socket(AF_INET, SOCK_DGRAM)
         self.server_socket.bind(('', self.server_port))
 
+    @staticmethod
+    def bytearray_to_int(ba, number_of_fields):
+        # number_of_fields specified index - 1 until which we add
+        return int.from_bytes(ba[0:number_of_fields], 'big')
+
+    @staticmethod
+    def get_header(packet):
+        return packet[0:HEADER_SIZE]
+
+    @staticmethod
+    def get_seq(packet):
+        header = Receiver.get_header(packet)
+        return Receiver.bytearray_to_int(header, 2)
+
+    @staticmethod
+    def get_eof(packet):
+        header = Receiver.get_header(packet)
+        return header[HEADER_SIZE - 1]
+
+    @staticmethod
+    def remove_header(packet):
+        return packet[HEADER_SIZE:]
+
     def receive_message(self):
         message, address = self.server_socket.recvfrom(BUFFER_SIZE)
         return message, address
@@ -27,8 +50,7 @@ class Receiver:
         while True:
             message, _ = Receiver.receive_message(self)
             received_messages.append(message)
-            header = message[0:HEADER_SIZE]
-            eof = header[HEADER_SIZE - 1]
+            eof = Receiver.get_eof(message)
 
             # logging.debug(f'Receiving packet {seq_byte_to_int(header[0:SEQ_SIZE])}.')
             # logging.debug(f'  EOF: {eof}')
@@ -38,7 +60,7 @@ class Receiver:
 
         with open(self.new_file_name, 'wb') as transferred_file:
             for m in received_messages:
-                packet = m[HEADER_SIZE:]
+                packet = Receiver.remove_header(m)
                 transferred_file.write(packet)
 
 

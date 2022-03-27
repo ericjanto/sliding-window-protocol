@@ -4,15 +4,18 @@ import sys
 
 from Sender1 import Sender
 from CustomTimer import *
-from constants import BUFFER_SIZE
+from constants import ACK_BUFFER_SIZE
 
 
 class Sender2(Sender):
     # An additional constructor since the timeout class field is new
     def __init__(self, server_ip, server_port, file_name, timeout_ms):
         super(Sender2, self).__init__(server_ip, server_port, file_name)
+
+        # Timeout needs to be provided in s in settimeout()
         self.timeout = timeout_ms / 1000
         self.client_socket.settimeout(self.timeout)
+
         self.timer = CustomTimer()
 
     @staticmethod
@@ -53,7 +56,7 @@ class Sender2(Sender):
                 self.client_socket.sendto(packets[s], (self.server_ip, self.server_port))
 
                 try:
-                    message, _ = self.client_socket.recvfrom(BUFFER_SIZE)
+                    message, _ = self.client_socket.recvfrom(ACK_BUFFER_SIZE)
                     if Sender2.is_ACK(s, message):
                         success = True
                         # If last ACK:
