@@ -21,4 +21,4 @@ ACK_BUFFER_SIZE = ACK_SIZE
 
 # Time after which sockets are closed if no messages are transferred
 # anymore
-TERMINATION_TIMEOUT = 10
+TERMINATION_TIMEOUT = 5

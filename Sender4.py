@@ -7,7 +7,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from Sender3 import Sender3
 from constants import ACK_BUFFER_SIZE
 from conversions import bytearray_to_int
-from utils import set_up_logging
+#from utils import set_up_logging
 
 
 class Sender4(Sender3):
@@ -26,11 +26,11 @@ class Sender4(Sender3):
     # Sends packet using an own thread as every packet
     # needs its own timer now.
     def send_single_packet(self, packet_seq):
-        logging.debug(f'Sending packet {packet_seq}.')
+        #logging.debug(f'Sending packet {packet_seq}.')
         self.client_socket.sendto(self.packets[packet_seq], self.client_address)
         self.resend_packet_on_timeout(packet_seq)
         self.sent_and_received.append(packet_seq)
-        logging.debug(f'Packet {packet_seq} sent and received.')
+        #logging.debug(f'Packet {packet_seq} sent and received.')
 
     def resend_packet_on_timeout(self, packet_seq):
         packet_removed_from_window = threading.Event()
@@ -42,7 +42,7 @@ class Sender4(Sender3):
         # As long as the packet is in the window, keep resending it if a timeout occurs
         while True:
             if not packet_removed_from_window.wait(timeout=self.timeout):
-                logging.debug(f'Resending packet {packet_seq}, no ACK received for it within timeout.')
+                #logging.debug(f'Resending packet {packet_seq}, no ACK received for it within timeout.')
                 self.client_socket.sendto(self.packets[packet_seq], self.client_address)
             else:
                 break
@@ -61,7 +61,7 @@ class Sender4(Sender3):
     def receiver_ack_sender4(self):
         while True:
             ack = bytearray_to_int(self.client_socket.recv(ACK_BUFFER_SIZE))
-            logging.debug(f'Received ack {ack}.')
+            #logging.debug(f'Received ack {ack}.')
 
             with self.lock:
                 self.update_window_sender4(ack)
@@ -98,23 +98,27 @@ class Sender4(Sender3):
 
     # Safely adds packet to window whilst maintaining packet order
     def add_packet_to_window(self, packet_seq):
-        logging.debug(f'Adding packet {packet_seq} to window.')
-        logging.debug(f'Window: {self.current_window}')
+        #logging.debug(f'Adding packet {packet_seq} to window.')
+        #logging.debug(f'Window: {self.current_window}')
         self.current_window.append(packet_seq)
         self.current_window.sort()
 
     # Safely removes packet from window whilst maintaining packet order
     def remove_packet_from_window(self, packet_seq):
-        logging.debug(f'Removing packet {packet_seq} from window.')
-        logging.debug(f'Window: {self.current_window}')
+        #logging.debug(f'Removing packet {packet_seq} from window.')
+        #logging.debug(f'Window: {self.current_window}')
         self.current_window.remove(packet_seq)
         self.current_window.sort()
 
     def add_packet_to_to_be_sent(self, packet_seq):
-        logging.debug(f'Adding packet {packet_seq} to to_be_sent.')
-        logging.debug(f'Window > to_be_sent: {self.current_window} >'
-                      f'{self.current_window_to_be_sent}')
+        #logging.debug(f'Adding packet {packet_seq} to to_be_sent.')
+        #logging.debug(f'Window > to_be_sent: {self.current_window} >'
+                      #f'{self.current_window_to_be_sent}')
         self.current_window_to_be_sent.append(packet_seq)
+        self.current_window_to_be_sent.sort()
+
+    def remove_packet_from_to_be_sent(self, packet_seq):
+        self.current_window_to_be_sent.remove(packet_seq)
         self.current_window_to_be_sent.sort()
 
     def send_file_content(self):
@@ -143,16 +147,24 @@ class Sender4(Sender3):
                     break
                 elif self.current_window_to_be_sent:
                     with self.lock:
+                        self.current_window_to_be_sent.sort()
+                        remove_list = []
                         for packet_seq in self.current_window_to_be_sent:
+                            logging.debug(f'Before submitting: {self.current_window_to_be_sent}')
+                            logging.debug(f'Submitting packet {packet_seq} to be sent.')
                             tpe.submit(self.send_single_packet, packet_seq)
-                            self.current_window_to_be_sent.remove(packet_seq)
+                            remove_list.append(packet_seq)
+                            logging.debug(f'After submitting: {self.current_window_to_be_sent}')
+
+                        for packet_seq in remove_list:
+                            self.remove_packet_from_to_be_sent(packet_seq)
                 # Only need to run this while loop within an interval
                 # where changes can actually happen, i.e. within timeout window.
                 time.sleep(self.timeout * 0.1)
 
 
 if __name__ == '__main__':
-    set_up_logging('sender4.log')
+    #set_up_logging('sender4.log')
 
     SERVER_IP = sys.argv[1]
     SERVER_PORT = int(sys.argv[2])

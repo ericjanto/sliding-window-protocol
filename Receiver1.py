@@ -2,13 +2,13 @@
 import time
 
 from constants import BUFFER_SIZE, HEADER_SIZE, SEQ_SIZE
-from conversions import seq_byte_to_int
+# from conversions import seq_byte_to_int
 
 # import logging
 from socket import *
 import sys
 
-from utils import set_up_logging
+# from utils import set_up_logging
 
 
 class Receiver:

@@ -1,10 +1,11 @@
-import logging
+# Eric Janto s1975761
+# import logging
 import sys
 from socket import *
 
 from Receiver3 import Receiver3
 from constants import TERMINATION_TIMEOUT
-from utils import set_up_logging, current_window_to_string
+# from utils import set_up_logging, current_window_to_string
 
 
 class Receiver4(Receiver3):
@@ -26,11 +27,11 @@ class Receiver4(Receiver3):
             seq = Receiver4.get_seq(message)
             eof = Receiver4.get_eof(message)
 
-            logging.debug(f'Received packet {seq}.')
+            # logging.debug(f'Received packet {seq}.')
 
             if self.is_in_current_window(seq):
-                logging.debug(f'Accepted packet {seq} for window with base'
-                              f'{self.base_seq}. Sending ACK.')
+                # logging.debug(f'Accepted packet {seq} for window with base'
+                # f'{self.base_seq}. Sending ACK.')
                 self.send_ACK(seq, server_address)
                 payload = self.remove_header(message)
                 self.current_window[seq] = payload
@@ -38,8 +39,8 @@ class Receiver4(Receiver3):
                 if seq == self.base_seq:
                     self.forward_window()
             elif self.is_in_previous_window(seq):
-                logging.debug(f'Packet {seq} previously received, sending ACK.'
-                              f'Current window base: {self.base_seq}.')
+                # logging.debug(f'Packet {seq} previously received, sending ACK.'
+                # f'Current window base: {self.base_seq}.')
                 self.send_ACK(seq, server_address)
             if self.all_packets_received(eof):
                 while True:
@@ -72,8 +73,8 @@ class Receiver4(Receiver3):
             else:
                 break
 
-        logging.debug(f'Forwarded window. New status:\n\n'
-                      f'{current_window_to_string(self.base_seq, 0, self.window_size)}')
+        # logging.debug(f'Forwarded window. New status:\n\n'
+        # f'{current_window_to_string(self.base_seq, 0, self.window_size)}')
 
     def is_in_current_window(self, seq):
         return seq in range(self.base_seq, self.base_seq + self.window_size)
@@ -99,7 +100,7 @@ class Receiver4(Receiver3):
 
 
 if __name__ == '__main__':
-    set_up_logging('receiver4.log')
+    # set_up_logging('receiver4.log')
 
     SERVER_PORT = int(sys.argv[1])
     NEW_FILE_NAME = sys.argv[2]

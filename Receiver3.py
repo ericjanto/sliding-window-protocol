@@ -1,5 +1,5 @@
 # Eric Janto s1975761
-import logging
+# import logging
 import sys
 
 from Receiver2 import Receiver2
@@ -40,12 +40,14 @@ class Receiver3(Receiver2):
                 if self.is_in_order(seq):
                     payload = Receiver3.remove_header(message)
                     self.received_packets[seq] = payload
-                    logging.debug(f'>> Packet {seq} accepted.')
+                    # logging.debug(f'>> Packet {seq} accepted.')
                 else:
-                    logging.debug(f'!! Packet {seq} not accepted, expected:'
-                                  f'{self.expected_seq()}')
+                    pass
+                    # logging.debug(f'!! Packet {seq} not accepted, expected:'
+                    # f'{self.expected_seq()}')
             else:
-                logging.debug(f'!! Packet {seq} discarded, duplicate detected.')
+                pass
+                # logging.debug(f'!! Packet {seq} discarded, duplicate detected.')
 
             # Send ACK for last received packet
             if self.received_packets.keys():
@@ -61,7 +63,7 @@ class Receiver3(Receiver2):
 
 
 if __name__ == '__main__':
-    set_up_logging('receiver3.log')
+    # set_up_logging('receiver3.log')
 
     SERVER_PORT = int(sys.argv[1])
     NEW_FILE_NAME = sys.argv[2]
